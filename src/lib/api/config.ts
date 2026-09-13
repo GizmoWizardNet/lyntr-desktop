@@ -10,3 +10,10 @@ export function avatarUrl(userId: string) {
 export function bannerUrl(banner: string) {
 	return `${CDN_BASE}/lyntr/${banner}`;
 }
+
+const SCROLLABLES_CDN_BASE = import.meta.env.VITE_LYNTR_SCROLLABLES_CDN_URL ?? CDN_BASE;
+const SCROLLABLES_BUCKET = import.meta.env.VITE_LYNTR_SCROLLABLES_BUCKET ?? 'scrollables';
+
+export function scrollableUrl(key: string) {
+	return `${SCROLLABLES_CDN_BASE}/${SCROLLABLES_BUCKET}/${key}`;
+}

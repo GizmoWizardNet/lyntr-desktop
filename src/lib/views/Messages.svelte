@@ -4,9 +4,11 @@
 		getDmConversations,
 		getDmMessages,
 		sendDmMessage,
+		dmDisplayName,
 		type DmConversation,
 		type DmMessage
 	} from '$lib/api/client';
+	import { avatarUrl } from '$lib/api/config';
 	import { onWsEvent } from '$lib/api/ws';
 	import { currentUser } from '$lib/stores/session';
 	import { unread } from '$lib/stores/app';
@@ -20,17 +22,22 @@
 	let draft = $state('');
 	let sending = $state(false);
 
-	const active = $derived(conversations.find((c) => c.conversation_id === activeId) ?? null);
+	const active = $derived(conversations.find((c) => c.id === activeId) ?? null);
+
+	function avatarFor(c: DmConversation): string | null {
+		if (c.is_group) return c.icon_url;
+		return c.other_user ? avatarUrl(c.other_user.user_id) : null;
+	}
 
 	async function loadConversations() {
 		loadingConversations = true;
 		error = null;
 		try {
 			conversations = await getDmConversations();
-			if (!activeId && conversations.length > 0) activeId = conversations[0].conversation_id;
+			if (!activeId && conversations.length > 0) activeId = conversations[0].id;
 			unread.update((u) => ({
 				...u,
-				messages: conversations.reduce((sum, c) => sum + c.unread_count, 0)
+				messages: conversations.reduce((sum, c) => sum + c.unread, 0)
 			}));
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to load conversations.';
@@ -97,24 +104,31 @@
 			<p class="p-3 text-xs text-muted-foreground">No conversations yet.</p>
 		{:else}
 			<ul class="flex-1 overflow-y-auto">
-				{#each conversations as c (c.conversation_id)}
+				{#each conversations as c (c.id)}
 					<li>
 						<button
 							class="flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-accent
-								{activeId === c.conversation_id ? 'bg-accent' : ''}"
-							onclick={() => (activeId = c.conversation_id)}
+								{activeId === c.id ? 'bg-accent' : ''}"
+							onclick={() => (activeId = c.id)}
 						>
-							<div class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-secondary font-semibold">
-								{c.display_name[0]?.toUpperCase()}
-							</div>
+							{#if avatarFor(c)}
+								<img src={avatarFor(c)} alt="" class="h-10 w-10 shrink-0 rounded-full object-cover" />
+							{:else}
+								<div class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-secondary font-semibold">
+									{dmDisplayName(c)[0]?.toUpperCase()}
+								</div>
+							{/if}
 							<div class="min-w-0 flex-1">
 								<div class="flex items-center justify-between">
-									<span class="truncate text-sm font-medium text-foreground">{c.display_name}</span>
+									<span class="truncate text-sm font-medium text-foreground">{dmDisplayName(c)}</span>
 								</div>
+								{#if c.last_message_preview}
+									<span class="block truncate text-xs text-muted-foreground">{c.last_message_preview}</span>
+								{/if}
 							</div>
-							{#if c.unread_count > 0}
+							{#if c.unread > 0}
 								<span class="grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
-									{c.unread_count}
+									{c.unread}
 								</span>
 							{/if}
 						</button>
@@ -131,10 +145,14 @@
 
 		{#if active}
 			<div class="flex items-center gap-3 border-b border-border px-4 py-3">
-				<div class="grid h-9 w-9 place-items-center rounded-full bg-secondary font-semibold">
-					{active.display_name[0]?.toUpperCase()}
-				</div>
-				<span class="font-medium text-foreground">{active.display_name}</span>
+				{#if avatarFor(active)}
+					<img src={avatarFor(active)} alt="" class="h-9 w-9 rounded-full object-cover" />
+				{:else}
+					<div class="grid h-9 w-9 place-items-center rounded-full bg-secondary font-semibold">
+						{dmDisplayName(active)[0]?.toUpperCase()}
+					</div>
+				{/if}
+				<span class="font-medium text-foreground">{dmDisplayName(active)}</span>
 			</div>
 
 			<div class="flex-1 space-y-3 overflow-y-auto p-4">

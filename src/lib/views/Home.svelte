@@ -1,13 +1,24 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { getFeed, createLynt, likeLynt, bookmarkLynt, type Lynt } from '$lib/api/client';
+	import {
+		getFeed,
+		createLynt,
+		likeLynt,
+		isLyntBookmarked,
+		addBookmark,
+		removeBookmark,
+		type Lynt
+	} from '$lib/api/client';
 	import { onWsEvent } from '$lib/api/ws';
+	import { currentUser } from '$lib/stores/session';
 
 	let lynts = $state<Lynt[]>([]);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
 	let draft = $state('');
 	let posting = $state(false);
+
+	let bookmarked = $state<Record<string, boolean>>({});
 
 	async function load() {
 		loading = true;
@@ -23,14 +34,24 @@
 
 	onMount(() => {
 		load();
-		// Live like counts from the real WebSocket layer — see
-		// broadcastLikeUpdate in lyntr/src/lib/ws.ts.
 		return onWsEvent((event) => {
 			if (event.type === 'like_update') {
-				lynts = lynts.map((l) => (l.id === event.lyntId ? { ...l, likeCount: event.likeCount } : l));
+				lynts = lynts.map((l) =>
+					l.id === event.lyntId
+						? {
+								...l,
+								likeCount: event.likeCount,
+								liked_by_user: 'liked' in event ? Boolean(event.liked) : l.liked_by_user
+							}
+						: l
+				);
 			} else if (event.type === 'comment_count_update') {
 				lynts = lynts.map((l) =>
 					l.id === event.lyntId ? { ...l, comment_count: event.commentCount } : l
+				);
+			} else if (event.type === 'repost_update') {
+				lynts = lynts.map((l) =>
+					l.id === event.lyntId ? { ...l, repost_count: event.repostCount } : l
 				);
 			} else if (event.type === 'lynt_deleted') {
 				lynts = lynts.filter((l) => l.id !== event.lyntId);
@@ -44,10 +65,7 @@
 		lynt.likeCount += wasLiked ? -1 : 1;
 		lynts = [...lynts];
 		try {
-			const res = await likeLynt(lynt.id);
-			lynt.liked_by_user = res.liked;
-			lynt.likeCount = res.likeCount;
-			lynts = [...lynts];
+			await likeLynt(lynt.id);
 		} catch {
 			lynt.liked_by_user = wasLiked;
 			lynt.likeCount += wasLiked ? 1 : -1;
@@ -55,11 +73,26 @@
 		}
 	}
 
-	async function toggleBookmark(lynt: Lynt) {
+	async function isBookmarked(lyntId: string): Promise<boolean> {
+		if (lyntId in bookmarked) return bookmarked[lyntId];
 		try {
-			await bookmarkLynt(lynt.id);
+			const res = await isLyntBookmarked(lyntId);
+			bookmarked = { ...bookmarked, [lyntId]: res.bookmarked };
+			return res.bookmarked;
 		} catch {
-			// non-fatal — the bookmark tab will just be stale until next load
+			return false;
+		}
+	}
+
+	async function toggleBookmark(lynt: Lynt) {
+		const current = await isBookmarked(lynt.id);
+		const next = !current;
+		bookmarked = { ...bookmarked, [lynt.id]: next }; // optimistic
+		try {
+			if (next) await addBookmark(lynt.id);
+			else await removeBookmark(lynt.id);
+		} catch {
+			bookmarked = { ...bookmarked, [lynt.id]: current }; // roll back
 		}
 	}
 
@@ -68,7 +101,22 @@
 		posting = true;
 		try {
 			const created = await createLynt(draft.trim());
-			lynts = [created, ...lynts];
+			const me = $currentUser;
+			lynts = [
+				{
+					...created,
+					username: me?.username ?? '',
+					handle: me?.handle ?? '',
+					verified: false,
+					views: 0,
+					likeCount: 0,
+					repost_count: 0,
+					comment_count: 0,
+					liked_by_user: false,
+					reposted_by_user: false
+				} as Lynt,
+				...lynts
+			];
 			draft = '';
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to post.';
@@ -167,7 +215,14 @@
 						>
 							{lynt.liked_by_user ? '♥' : '♡'} {lynt.likeCount}
 						</button>
-						<button class="ml-auto" onclick={() => toggleBookmark(lynt)} title="Bookmark">🔖</button>
+						<button
+							class="ml-auto"
+							onclick={() => toggleBookmark(lynt)}
+							title="Bookmark"
+							style={bookmarked[lynt.id] ? 'color: hsl(var(--accent-amber))' : ''}
+						>
+							🔖
+						</button>
 					</div>
 				</article>
 			{/each}

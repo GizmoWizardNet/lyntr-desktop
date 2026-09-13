@@ -1,5 +1,4 @@
 import { API_BASE } from './config';
-
 export class ApiError extends Error {
 	constructor(
 		public status: number,
@@ -10,11 +9,12 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+	const isFormBody = init?.body instanceof FormData;
 	const res = await fetch(`${API_BASE}${path}`, {
 		...init,
 		credentials: 'include',
 		headers: {
-			...(init?.body ? { 'Content-Type': 'application/json' } : {}),
+			...(init?.body && !isFormBody ? { 'Content-Type': 'application/json' } : {}),
 			...init?.headers
 		}
 	});
@@ -25,7 +25,6 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 			const body = await res.json();
 			message = body?.error ?? message;
 		} catch {
-			// non-JSON error body — fall back to statusText
 		}
 		throw new ApiError(res.status, message);
 	}
@@ -37,7 +36,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 const get = <T>(path: string) => request<T>(path);
 const post = <T>(path: string, body?: unknown) =>
 	request<T>(path, { method: 'POST', body: body ? JSON.stringify(body) : undefined });
-
+const del = <T>(path: string) => request<T>(path, { method: 'DELETE' });
+const postForm = <T>(path: string, form: FormData) => request<T>(path, { method: 'POST', body: form });
 export interface Me {
 	id: string;
 	username: string;
@@ -85,13 +85,12 @@ export function getFeed(opts: { type?: FeedTab; handle?: string; before?: string
 	if (opts.type) params.set('type', opts.type);
 	if (opts.handle) params.set('handle', opts.handle);
 	if (opts.before) params.set('before', opts.before);
-	return get<Lynt[]>(`/api/feed?${params}`);
+	return get<{ lynts: Lynt[] }>(`/api/feed?${params}`).then((r) => r.lynts);
 }
 
 export function getMe() {
 	return get<Me>('/api/me');
 }
-
 export interface PublicProfile {
 	id: string;
 	handle: string;
@@ -121,19 +120,30 @@ export function getProfileByHandle(handle: string) {
 }
 
 export function createLynt(content: string) {
-	return post<Lynt>('/api/lynt', { content });
+	const form = new FormData();
+	form.set('content', content);
+	return postForm<Lynt>('/api/lynt', form);
 }
 
 export function likeLynt(lyntId: string) {
-	return post<{ liked: boolean; likeCount: number }>('/api/likelynt', { lyntId });
+	return post<{ message: string }>('/api/likelynt', { lyntId });
 }
 
-export function bookmarkLynt(lyntId: string) {
-	return post<{ bookmarked: boolean }>('/api/bookmark', { lyntId });
+export function isLyntBookmarked(lyntId: string) {
+	return get<{ bookmarked: boolean }>(`/api/bookmark?id=${encodeURIComponent(lyntId)}`);
 }
 
-export function followUser(userId: string) {
-	return post<{ following: boolean }>('/api/follow', { userId });
+export function addBookmark(lyntId: string) {
+	return post<{ message: string }>('/api/bookmark', { lyntId });
+}
+
+export function removeBookmark(lyntId: string) {
+	return del<{ message: string }>(`/api/bookmark?id=${encodeURIComponent(lyntId)}`);
+}
+
+export async function followUser(userId: string) {
+	const res = await post<{ message: string }>('/api/follow', { userId });
+	return { following: res.message.startsWith('Followed') };
 }
 
 export interface NotificationRow {
@@ -159,25 +169,48 @@ export function getNotifications() {
 export function getUnreadNotificationCount() {
 	return get<{ count: number }>('/api/notifications/unread');
 }
+export interface DmConversationMember {
+	user_id: string;
+	username: string;
+	handle: string;
+	name_color: string | null;
+	verified: boolean;
+}
 
 export interface DmConversation {
-	conversation_id: string;
+	id: string;
+	status: 'pending' | 'active' | string;
 	is_group: boolean;
-	display_name: string;
-	avatar_url: string | null;
+	name: string | null;
+	icon_url: string | null;
+	owner_id: string | null;
 	last_message_at: string | null;
-	unread_count: number;
+	last_message_preview: string | null;
+	created_at: string;
 	muted: boolean;
 	pinned: boolean;
+	unread: number;
+	other_user: DmConversationMember | null;
+	members?: DmConversationMember[];
+}
+
+export function dmDisplayName(c: DmConversation): string {
+	if (c.is_group) return c.name ?? 'Group chat';
+	return c.other_user?.username ?? 'Unknown user';
 }
 
 export interface DmMessage {
 	id: string;
 	conversation_id: string;
 	sender_id: string;
-	content: string;
+	content: string | null;
+	gif_url?: string | null;
+	gif_preview_url?: string | null;
+	attachment_url?: string | null;
+	attachment_name?: string | null;
 	created_at: string;
-	reactions?: Record<string, number>;
+	reactions: { emoji: string; count: number; me: boolean }[];
+	reply_to: { id: string; content: string | null; sender_id: string } | null;
 }
 
 export function getDmConversations() {
@@ -187,12 +220,18 @@ export function getDmConversations() {
 export function getDmMessages(conversationId: string, before?: string) {
 	const params = new URLSearchParams({ conversation_id: conversationId });
 	if (before) params.set('before', before);
-	return get<DmMessage[]>(`/api/dm/messages?${params}`);
+	return get<{ conversation: unknown; messages: DmMessage[] }>(`/api/dm/messages?${params}`).then(
+		(r) => r.messages
+	);
 }
 
 export function sendDmMessage(conversationId: string, content: string) {
-	return post<DmMessage>('/api/dm/messages', { conversation_id: conversationId, content });
+	const form = new FormData();
+	form.set('conversation_id', conversationId);
+	form.set('content', content);
+	return postForm<DmMessage>('/api/dm/messages', form);
 }
+
 
 export interface AchievementRow {
 	key: string;
@@ -251,22 +290,50 @@ export function getLeaderboardTop3() {
 export interface ForumCategory {
 	id: string;
 	name: string;
-	slug: string;
-	thread_count: number;
-	post_count: number;
-	last_activity_at: string | null;
+	description: string | null;
+	sortOrder: number;
+	threadCount: number;
+	postCount: number;
+	lastActivityAt: string | null;
 }
 
 export interface ForumThread {
 	id: string;
 	title: string;
-	category_id: string;
+	categoryId: string;
 	pinned: boolean;
-	created_at: string;
+	closed?: boolean;
+	views?: number;
+	createdAt: string;
+	lastActivityAt?: string | null;
+	userId?: string | null;
 	username: string;
 	handle: string;
-	reply_count: number;
+	verified?: boolean;
+	replyCount: number;
 	score: number;
+}
+
+export interface ForumPost {
+	id: string;
+	threadId: string;
+	content: string;
+	isOp: boolean;
+	createdAt: string;
+	editedAt: string | null;
+	deleted: boolean;
+	userId: string | null;
+	handle: string | null;
+	username: string | null;
+	verified: boolean | null;
+	isAdmin?: boolean | null;
+	contributor?: boolean | null;
+	loginStreak?: number | null;
+	nameColor: string | null;
+	score: number;
+	upvotes: number;
+	downvotes: number;
+	viewerVote: number;
 }
 
 export function getForumCategories() {
@@ -281,7 +348,67 @@ export function getForumThreads(opts: { category?: string; sort?: 'active' | 'ne
 }
 
 export function getForumThread(id: string) {
-	return get<{ thread: ForumThread; posts: unknown[] }>(`/api/forum/threads/${id}`);
+	return get<{ thread: ForumThread; posts: ForumPost[]; viewerIsAdmin: boolean }>(
+		`/api/forum/threads/${id}`
+	);
+}
+
+export function createForumThread(categoryId: string, title: string, content: string) {
+	return post<ForumThread & { firstPostId: string }>('/api/forum/threads', {
+		categoryId,
+		title,
+		content
+	});
+}
+
+export function createForumPost(threadId: string, content: string) {
+	return post<ForumPost>('/api/forum/posts', { threadId, content });
+}
+
+export function voteForumPost(postId: string, value: 1 | -1 | 0) {
+	return post<{ postId: string; viewerVote: number; score: number; upvotes: number; downvotes: number }>(
+		`/api/forum/posts/${postId}/vote`,
+		{ value }
+	);
+}
+
+export interface Scrollable {
+	id: string;
+	userId: string;
+	caption: string | null;
+	videoKey: string;
+	thumbnailKey: string | null;
+	durationSeconds: number;
+	fileSizeBytes: number;
+	views: number;
+	createdAt: string;
+	username: string;
+	handle: string;
+	verified: boolean;
+	isAdmin: boolean;
+	contributor: boolean;
+	nameColor: string | null;
+	authorIq: number;
+	likeCount: number;
+	bookmarkCount: number;
+	commentCount: number;
+	liked: boolean;
+	bookmarked: boolean;
+}
+
+export function getScrollables(opts: { before?: string; minIq?: number } = {}) {
+	const params = new URLSearchParams();
+	if (opts.before) params.set('before', opts.before);
+	if (opts.minIq !== undefined) params.set('minIq', String(opts.minIq));
+	return get<{ scrollables: Scrollable[] }>(`/api/scrollables?${params}`).then((r) => r.scrollables);
+}
+
+export function toggleScrollableLike(id: string) {
+	return post<{ liked: boolean; likeCount: number }>(`/api/scrollables/${id}/like`);
+}
+
+export function toggleScrollableBookmark(id: string) {
+	return post<{ bookmarked: boolean }>(`/api/scrollables/${id}/bookmark`);
 }
 
 export interface ShopLyntskin {
@@ -297,5 +424,5 @@ export function getShopLyntskins() {
 }
 
 export function purchaseLyntskin(key: string) {
-	return post<{ purchased: boolean; balance: number }>('/api/shop/lyntskins/purchase', { key });
+	return post<{ purchased: string }>('/api/shop/lyntskins/purchase', { key });
 }

@@ -1,6 +1,10 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { getShopLyntskins, purchaseLyntskin, type ShopLyntskin } from '$lib/api/client';
+	import { onMount } from "svelte";
+	import {
+		getShopLyntskins,
+		purchaseLyntskin,
+		type ShopLyntskin,
+	} from "$lib/api/client";
 
 	let skins = $state<ShopLyntskin[]>([]);
 	let balance = $state(0);
@@ -18,7 +22,7 @@
 			skins = res.skins;
 			balance = res.balance;
 		} catch (e) {
-			error = e instanceof Error ? e.message : 'Failed to load the shop.';
+			error = e instanceof Error ? e.message : "Failed to load the shop.";
 		} finally {
 			loading = false;
 		}
@@ -30,12 +34,14 @@
 		purchasing = true;
 		purchaseError = null;
 		try {
-			const res = await purchaseLyntskin(skin.key);
-			balance = res.balance;
-			skins = skins.map((s) => (s.key === skin.key ? { ...s, owned: true } : s));
+			await purchaseLyntskin(skin.key);
+			balance -= skin.price;
+			skins = skins.map((s) =>
+				s.key === skin.key ? { ...s, owned: true } : s,
+			);
 			selected = skins.find((s) => s.key === skin.key) ?? null;
 		} catch (e) {
-			purchaseError = e instanceof Error ? e.message : 'Purchase failed.';
+			purchaseError = e instanceof Error ? e.message : "Purchase failed.";
 		} finally {
 			purchasing = false;
 		}
@@ -44,9 +50,13 @@
 
 <div class="mx-auto max-w-5xl p-6">
 	<div class="mb-5 flex items-center justify-between">
-		<h1 class="font-display text-lg font-bold text-foreground">Lyntskins</h1>
+		<h1 class="font-display text-lg font-bold text-foreground">
+			Lyntskins
+		</h1>
 		{#if !loading && !error}
-			<div class="lynt-card flex items-center gap-2 px-3 py-1.5 text-sm font-semibold">
+			<div
+				class="lynt-card flex items-center gap-2 px-3 py-1.5 text-sm font-semibold"
+			>
 				<img src="/aura.png" alt="" class="h-4 w-4" />
 				{balance.toLocaleString()} XP
 			</div>
@@ -56,7 +66,10 @@
 	{#if loading}
 		<div class="text-center text-sm text-muted-foreground">Loading…</div>
 	{:else if error}
-		<div class="lynt-card p-4 text-sm" style="color: hsl(var(--destructive));">
+		<div
+			class="lynt-card p-4 text-sm"
+			style="color: hsl(var(--destructive));"
+		>
 			{error}
 			<button class="ml-2 underline" onclick={load}>Retry</button>
 		</div>
@@ -70,15 +83,31 @@
 						purchaseError = null;
 					}}
 				>
-					<div class="aspect-video w-full overflow-hidden bg-black/20">
-						<img src={skin.file} alt={skin.name} class="h-full w-full object-cover" loading="lazy" />
+					<div
+						class="aspect-video w-full overflow-hidden bg-black/20"
+					>
+						<img
+							src={skin.file}
+							alt={skin.name}
+							class="h-full w-full object-cover"
+							loading="lazy"
+						/>
 					</div>
 					<div class="flex flex-1 flex-col gap-1 p-3">
-						<span class="font-display text-sm font-bold text-foreground">{skin.name}</span>
+						<span
+							class="font-display text-sm font-bold text-foreground"
+							>{skin.name}</span
+						>
 						<div class="mt-auto flex items-center justify-between">
-							<span class="text-xs text-muted-foreground">{skin.price.toLocaleString()} XP</span>
+							<span class="text-xs text-muted-foreground"
+								>{skin.price.toLocaleString()} XP</span
+							>
 							{#if skin.owned}
-								<span class="text-[11px] font-semibold" style="color: hsl(var(--accent-green))">Owned</span>
+								<span
+									class="text-[11px] font-semibold"
+									style="color: hsl(var(--accent-green))"
+									>Owned</span
+								>
 							{/if}
 						</div>
 					</div>
@@ -98,17 +127,33 @@
 			style="border-top-color: var(--bevel-light); border-left-color: var(--bevel-light); border-bottom-color: var(--bevel-dark); border-right-color: var(--bevel-dark); box-shadow: var(--hard-shadow); border-radius: 5px;"
 			onclick={(e) => e.stopPropagation()}
 		>
-			<div class="mb-3 aspect-video w-full overflow-hidden rounded" style="box-shadow: var(--inset-shadow);">
-				<img src={selected.file} alt={selected.name} class="h-full w-full object-cover" />
+			<div
+				class="mb-3 aspect-video w-full overflow-hidden rounded"
+				style="box-shadow: var(--inset-shadow);"
+			>
+				<img
+					src={selected.file}
+					alt={selected.name}
+					class="h-full w-full object-cover"
+				/>
 			</div>
-			<h3 class="font-display text-base font-bold text-foreground">{selected.name}</h3>
-			<p class="mt-1 text-sm text-muted-foreground">{selected.price.toLocaleString()} XP</p>
+			<h3 class="font-display text-base font-bold text-foreground">
+				{selected.name}
+			</h3>
+			<p class="mt-1 text-sm text-muted-foreground">
+				{selected.price.toLocaleString()} XP
+			</p>
 			{#if purchaseError}
-				<p class="mt-2 text-xs" style="color: hsl(var(--destructive));">{purchaseError}</p>
+				<p class="mt-2 text-xs" style="color: hsl(var(--destructive));">
+					{purchaseError}
+				</p>
 			{/if}
 			<div class="mt-4 flex gap-2">
 				{#if selected.owned}
-					<button class="flex-1 bg-primary py-2 text-sm font-semibold text-primary-foreground" disabled>
+					<button
+						class="flex-1 bg-primary py-2 text-sm font-semibold text-primary-foreground"
+						disabled
+					>
 						Equip
 					</button>
 				{:else}
@@ -117,7 +162,11 @@
 						disabled={purchasing || balance < selected.price}
 						onclick={() => selected && purchase(selected)}
 					>
-						{purchasing ? 'Purchasing…' : balance < selected.price ? 'Not enough XP' : 'Purchase'}
+						{purchasing
+							? "Purchasing…"
+							: balance < selected.price
+								? "Not enough XP"
+								: "Purchase"}
 					</button>
 				{/if}
 				<button
