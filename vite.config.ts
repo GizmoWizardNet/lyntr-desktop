@@ -1,11 +1,11 @@
-import { sveltekit } from '@sveltejs/vite-plugin-svelte';
+import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
 
 // Tauri expects a fixed dev server port and to know about its own env vars.
 // See: https://v2.tauri.app/start/frontend/sveltekit/
 const host = process.env.TAURI_DEV_HOST;
 
-export default defineConfig(async () => ({
+export default defineConfig(() => ({
 	plugins: [sveltekit()],
 	clearScreen: false,
 	server: {
