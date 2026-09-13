@@ -1,45 +1,3 @@
-// Real API client for the shared Lyntr backend. Every function here maps
-// 1:1 to a route that exists in lyntr/src/routes/api/**, using the same
-// method, path, query params, and body shape the web app itself sends —
-// read directly out of those +server.ts files, not guessed:
-//
-//   GET  /api/me
-//   GET  /api/feed?type=&handle=&before=&excludePosts=&minIq=
-//   POST /api/lynt                       { content, ... }
-//   POST /api/likelynt                   { lyntId }
-//   POST /api/bookmark                   { lyntId }
-//   POST /api/follow                     { userId }
-//   GET  /api/notifications
-//   GET  /api/notifications/unread
-//   GET  /api/dm/conversations
-//   GET  /api/dm/messages?conversation_id=&before=
-//   POST /api/dm/messages                { conversation_id, content }
-//   GET  /api/achievements
-//   POST /api/achievements/claim         { key }
-//   GET  /api/leaderboard/top3
-//   GET  /api/leaderboard?category=&limit=&offset=
-//   GET  /api/forum/categories
-//   GET  /api/forum/threads?category=&sort=&limit=
-//   GET  /api/forum/threads/:id
-//   GET  /api/shop/lyntskins
-//   POST /api/shop/lyntskins/purchase    { key }
-//
-// Auth rides on the `_TOKEN__DO_NOT_SHARE` httpOnly cookie set by the real
-// site during login (see src/lib/auth.ts for how the desktop app gets that
-// cookie into its own request context) — every call below sends
-// `credentials: 'include'` so the cookie goes along automatically, exactly
-// like a same-site fetch from the web app itself would.
-//
-// IMPORTANT — the one thing a client repo genuinely cannot do on its own:
-// lyntr.gizmowizard.tech has to answer these cross-origin requests (from
-// the Tauri webview's origin, e.g. http://tauri.localhost) with
-// `Access-Control-Allow-Origin: <that origin>` AND
-// `Access-Control-Allow-Credentials: true`. That's a one-line addition to
-// the web repo's `hooks.server.ts` (or wherever its CORS headers are set),
-// not something expressible from this repo. Until it's added, every call
-// below will fail with a CORS error in the browser console — that's
-// expected, not a bug in this client. See README "Backend prerequisite".
-
 import { API_BASE } from './config';
 
 export class ApiError extends Error {
@@ -79,8 +37,6 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 const get = <T>(path: string) => request<T>(path);
 const post = <T>(path: string, body?: unknown) =>
 	request<T>(path, { method: 'POST', body: body ? JSON.stringify(body) : undefined });
-
-// ── Types (field names as returned by the real endpoints above) ───────────
 
 export interface Me {
 	id: string;
@@ -134,6 +90,34 @@ export function getFeed(opts: { type?: FeedTab; handle?: string; before?: string
 
 export function getMe() {
 	return get<Me>('/api/me');
+}
+
+export interface PublicProfile {
+	id: string;
+	handle: string;
+	created_at: string;
+	username: string;
+	iq: number;
+	verified: boolean;
+	followers: number;
+	following: number;
+	bio: string | null;
+	banner: string | null;
+	is_admin: boolean;
+	contributor: boolean;
+	login_streak: number;
+	name_color: string | null;
+	lynt_coins: number;
+	aura_score: number;
+	pinned_achievement_key: string | null;
+	status_text: string | null;
+	status_expires_at: string | null;
+	achievements: { key: string; unlocked_at: string }[];
+	viewer_follows: boolean;
+}
+
+export function getProfileByHandle(handle: string) {
+	return get<PublicProfile>(`/api/profile/${encodeURIComponent(handle)}`);
 }
 
 export function createLynt(content: string) {
