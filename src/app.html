@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+		<link rel="icon" href="%sveltekit.assets%/favicon.ico" />
+		<title>Lyntr</title>
+		%sveltekit.head%
+		<script>
+			// Match the web app's own light/dark persistence so a user's
+			// preference carries the same meaning on desktop. Runs before
+			// paint to avoid a flash of the wrong theme.
+			try {
+				const saved = localStorage.getItem('lyntr-theme');
+				const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+				if (saved === 'dark' || (!saved && prefersDark)) {
+					document.documentElement.classList.add('dark');
+				}
+			} catch {}
+		</script>
+		<style>
+			/* Cream in light mode, near-black in dark — avoids a flash of
+			   the wrong background before app.css loads. */
+			html:not(.dark) body {
+				background: hsl(53 24% 93%);
+			}
+			html.dark body {
+				background: hsl(20 14.3% 4.1%);
+			}
+		</style>
+	</head>
+	<body data-sveltekit-preload-data="hover" oncontextmenu="return false;">
+		<div style="display: contents">%sveltekit.body%</div>
+	</body>
+</html>

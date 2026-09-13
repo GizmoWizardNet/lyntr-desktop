@@ -1,0 +1,70 @@
+{
+	"$schema": "https://schema.tauri.app/config/2",
+	"productName": "Lyntr",
+	"version": "0.1.0",
+	"identifier": "tech.gizmowizard.lyntr.desktop",
+	"build": {
+		"beforeDevCommand": "npm run dev",
+		"beforeBuildCommand": "npm run build",
+		"devUrl": "http://localhost:1420",
+		"frontendDist": "../build"
+	},
+	"app": {
+		"withGlobalTauri": false,
+		"windows": [
+			{
+				"label": "main",
+				"title": "Lyntr",
+				"width": 1280,
+				"height": 800,
+				"minWidth": 900,
+				"minHeight": 600,
+				"decorations": false,
+				"transparent": false,
+				"center": true,
+				"dragDropEnabled": true
+			}
+		],
+		"security": {
+			"csp": "default-src 'self'; img-src 'self' asset: https: data:; connect-src 'self' https: wss:; style-src 'self' 'unsafe-inline'"
+		}
+	},
+	"bundle": {
+		"active": true,
+		"targets": ["nsis"],
+		"identifier": "tech.gizmowizard.lyntr.desktop",
+		"publisher": "GizmoWizardNet",
+		"icon": [
+			"icons/32x32.png",
+			"icons/128x128.png",
+			"icons/128x128@2x.png",
+			"icons/icon.icns",
+			"icons/icon.ico"
+		],
+		"windows": {
+			"nsis": {
+				"installMode": "currentUser",
+				"languages": ["English"],
+				"displayLanguageSelector": false
+			},
+			"webviewInstallMode": {
+				"type": "downloadBootstrapper"
+			}
+		}
+	},
+	"plugins": {
+		"updater": {
+			"active": true,
+			"endpoints": [
+				"https://updates.gizmowizard.tech/lyntr-desktop/{{target}}/{{arch}}/{{current_version}}"
+			],
+			"dialog": false,
+			"pubkey": "REPLACE_WITH_YOUR_GENERATED_PUBLIC_KEY"
+		},
+		"deep-link": {
+			"desktop": {
+				"schemes": ["lyntr"]
+			}
+		}
+	}
+}
