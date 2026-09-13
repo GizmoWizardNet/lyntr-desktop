@@ -32,7 +32,6 @@
 	"bundle": {
 		"active": true,
 		"targets": ["nsis"],
-		"identifier": "tech.gizmowizard.lyntr.desktop",
 		"publisher": "GizmoWizardNet",
 		"icon": [
 			"icons/32x32.png",
