@@ -16,7 +16,7 @@ export async function startLogin(): Promise<void> {
 	const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
 
 	const login = new WebviewWindow('lyntr-login', {
-		url: 'https://example.com',
+		url: API_BASE,
 		title: 'Sign in to Lyntr',
 		width: 480,
 		height: 720,
