@@ -28,12 +28,13 @@
 	},
 	"dependencies": {
 		"@tauri-apps/api": "^2.1.1",
-		"@tauri-apps/plugin-notification": "^2.2.0",
-		"@tauri-apps/plugin-os": "^2.0.0",
-		"@tauri-apps/plugin-updater": "^2.3.0",
-		"@tauri-apps/plugin-process": "^2.0.0",
 		"@tauri-apps/plugin-deep-link": "^2.0.1",
+		"@tauri-apps/plugin-notification": "^2.2.0",
+		"@tauri-apps/plugin-opener": "^2.5.5",
+		"@tauri-apps/plugin-os": "^2.0.0",
+		"@tauri-apps/plugin-process": "^2.0.0",
 		"@tauri-apps/plugin-store": "^2.1.0",
+		"@tauri-apps/plugin-updater": "^2.3.0",
 		"cmdk-sv": "^0.0.19"
 	}
 }

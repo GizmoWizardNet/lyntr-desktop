@@ -10,11 +10,24 @@ export class ApiError extends Error {
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
 	const isFormBody = init?.body instanceof FormData;
+	const desktopToken =
+		typeof sessionStorage !== 'undefined'
+			? sessionStorage.getItem('lyntr-desktop-token')
+			: null;
 	const res = await fetch(`${API_BASE}${path}`, {
 		...init,
 		credentials: 'include',
 		headers: {
-			...(init?.body && !isFormBody ? { 'Content-Type': 'application/json' } : {}),
+			...(init?.body && !isFormBody
+				? { 'Content-Type': 'application/json' }
+				: {}),
+
+			...(desktopToken
+				? {
+					Authorization: `Bearer ${desktopToken}`
+				}
+				: {}),
+
 			...init?.headers
 		}
 	});

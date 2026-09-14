@@ -20,8 +20,7 @@
 	<div class="lynt-card flex max-w-sm flex-col items-center gap-4 p-6 text-center">
 		<h1 class="font-display text-base font-bold text-foreground">Sign in to Lyntr</h1>
 		<p class="text-sm text-muted-foreground">
-			This opens lyntr.gizmowizard.tech in a sign-in window — the same Google/Discord login the
-			web app uses. Nothing here fakes or bypasses that.
+			Log in or sign up to continue.
 		</p>
 		<button
 			class="w-full bg-primary py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
