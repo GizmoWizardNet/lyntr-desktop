@@ -14,6 +14,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 		typeof sessionStorage !== 'undefined'
 			? sessionStorage.getItem('lyntr-desktop-token')
 			: null;
+
+	console.log('[Lyntr Desktop] API request:', {
+		path,
+		hasDesktopToken: Boolean(desktopToken),
+		tokenLength: desktopToken?.length ?? 0
+	});
+	
 	const res = await fetch(`${API_BASE}${path}`, {
 		...init,
 		credentials: 'include',
