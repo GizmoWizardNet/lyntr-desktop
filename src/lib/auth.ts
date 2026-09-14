@@ -25,11 +25,10 @@ import { refreshSession } from './stores/session';
 const hasTauri = () => browser && '__TAURI_INTERNALS__' in window;
 
 export async function startLogin(): Promise<void> {
+
+	console.log('[Lyntr Desktop] startLogin called');
+
 	if (!hasTauri()) {
-		// Dev-in-a-browser-tab fallback: just open the real login page in a
-		// normal tab. The user logs in there; once cookies for API_BASE are
-		// set (same-browser, so shared automatically), come back and this
-		// tab's own fetches will already be authenticated on next check.
 		window.open(API_BASE, '_blank');
 		return;
 	}
@@ -37,12 +36,28 @@ export async function startLogin(): Promise<void> {
 	const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
 
 	const login = new WebviewWindow('lyntr-login', {
-		url: API_BASE,
+		url: 'https://example.com',
 		title: 'Sign in to Lyntr',
 		width: 480,
 		height: 720,
 		center: true,
 		alwaysOnTop: true
+	});
+
+	login.once('tauri://created', () => {
+		console.log('[Lyntr Desktop] login window CREATED');
+	});
+
+	login.once('tauri://error', (e) => {
+		console.error('[Lyntr Desktop] login window ERROR:', e);
+	});
+
+	login.once('tauri://destroyed', () => {
+		console.log('[Lyntr Desktop] login window DESTROYED');
+	});
+
+	login.listen('tauri://created', () => {
+		console.log('[Lyntr Desktop] login webview created');
 	});
 
 	let settled = false;
@@ -70,7 +85,7 @@ export async function startLogin(): Promise<void> {
 
 export async function logout(): Promise<void> {
 	// lyntr's own /api/logout clears the cookie server-side.
-	await fetch(`${API_BASE}/api/logout`, { method: 'POST', credentials: 'include' }).catch(() => {});
+	await fetch(`${API_BASE}/api/logout`, { method: 'POST', credentials: 'include' }).catch(() => { });
 	const { clearSession } = await import('./stores/session');
 	clearSession();
 }

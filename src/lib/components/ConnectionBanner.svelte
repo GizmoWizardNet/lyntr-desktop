@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { connectionState } from '$lib/stores/app';
+	import { authState } from '$lib/stores/session';
 </script>
 
-{#if $connectionState !== 'connected'}
+{#if $authState === 'authenticated' && $connectionState !== 'connected'}
 	<div
 		class="flex items-center justify-center gap-3 border-b-2 px-4 py-2 text-sm animate-fade-in"
 		style="background: var(--header-bg); border-bottom-color: var(--bevel-dark);"
