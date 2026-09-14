@@ -1,7 +1,7 @@
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    AppHandle, Manager, WindowEvent, Emitter,
+    AppHandle, Emitter, Manager, WindowEvent,
 };
 
 /// Frontend calls this (via the JS `invoke` bridge, wrapped by
@@ -53,8 +53,7 @@ pub fn run() {
             let handle = app.handle().clone();
 
             let open_item = MenuItem::with_id(app, "open", "Open Lyntr", true, None::<&str>)?;
-            let messages_item =
-                MenuItem::with_id(app, "messages", "Messages", true, None::<&str>)?;
+            let messages_item = MenuItem::with_id(app, "messages", "Messages", true, None::<&str>)?;
             let notifications_item =
                 MenuItem::with_id(app, "notifications", "Notifications", true, None::<&str>)?;
             let quit_item = MenuItem::with_id(app, "quit", "Quit Lyntr", true, None::<&str>)?;
@@ -101,10 +100,6 @@ pub fn run() {
                 })
                 .build(app)?;
 
-            // Register the `lyntr://` scheme so links like lyntr://@someone
-            // or lyntr://lynt/123 open straight into this window. Routing
-            // the resulting URL to the right view happens on the frontend
-            // via the deep-link plugin's `onOpenUrl` listener.
             #[cfg(desktop)]
             {
                 use tauri_plugin_deep_link::DeepLinkExt;
@@ -114,9 +109,12 @@ pub fn run() {
             Ok(())
         })
         .on_window_event(|window, event| {
+            if window.label() != "main" {
+                return;
+            }
+
             if let WindowEvent::CloseRequested { api, .. } = event {
-                // "Close to tray" behavior — configurable in Settings. Swap
-                // this for `window.close()` if the user disables it.
+                // Close-to-tray only applies to the main Lyntr window.
                 api.prevent_close();
                 let _ = window.hide();
             }

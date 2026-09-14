@@ -11,18 +11,20 @@ export const currentUser = writable<Me | null>(null);
  *  error) — anything else (network failure, CORS block before the backend
  *  prerequisite is set up, 5xx) is surfaced so it isn't silently mistaken
  *  for a logged-out state. */
-export async function refreshSession(): Promise<void> {
+
+export async function refreshSession(): Promise<boolean> {
 	try {
 		const me = await getMe();
 		currentUser.set(me);
 		authState.set('authenticated');
 		connectWs();
+		return true;
 	} catch (err) {
 		if (err instanceof ApiError && err.status === 401) {
 			currentUser.set(null);
 			authState.set('unauthenticated');
 			disconnectWs();
-			return;
+			return false;
 		}
 		throw err;
 	}
