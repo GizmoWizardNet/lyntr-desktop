@@ -106,6 +106,8 @@ export async function handleDesktopAuthCallback(url: URL) {
 			try {
 				const data = await response.json();
 
+				console.log('[Lyntr Desktop] Exchange response:', data);
+
 				if (typeof data?.message === 'string') {
 					message = data.message;
 				}
@@ -118,12 +120,40 @@ export async function handleDesktopAuthCallback(url: URL) {
 
 		const data = await response.json();
 
+		console.log('[Lyntr Desktop] Exchange succeeded:', {
+			hasToken: Boolean(data?.token),
+			tokenType: data?.token_type,
+			expiresIn: data?.expires_in
+		});
+
 		if (!data?.token) {
-			throw new Error('Authentication server returned no desktop token.');
+			throw new Error(
+				'Authentication server returned no desktop token.'
+			);
 		}
 
+		sessionStorage.setItem(
+			'lyntr-desktop-token',
+			data.token
+		);
+
+		console.log(
+			'[Lyntr Desktop] Desktop token stored:',
+			Boolean(sessionStorage.getItem('lyntr-desktop-token'))
+		);
+
+		clearAuthState();
+
+		desktopAuthState.set('authenticated');
+
+		await refreshSession();
+
+		console.log(
+			'[Lyntr Desktop] Session refresh completed'
+		);
+
 		/*
-		 * TODO:
+		 * Massive TODO:
 		 *
 		 * Store the desktop token using the Tauri secure-storage
 		 * implementation once the backend endpoint is live.
@@ -166,8 +196,8 @@ export async function logout(): Promise<void> {
 			credentials: 'include',
 			headers: token
 				? {
-						Authorization: `Bearer ${token}`
-					}
+					Authorization: `Bearer ${token}`
+				}
 				: undefined
 		});
 	} catch {
