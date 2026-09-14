@@ -1,24 +1,25 @@
 {
-  "$schema": "../gen/schemas/desktop-schema.json",
-  "identifier": "default",
-  "description": "Capabilities granted to the main Lyntr window",
-  "windows": [
-    "main"
-  ],
-  "permissions": [
-    "core:default",
-    "core:window:allow-minimize",
-    "core:window:allow-toggle-maximize",
-    "core:window:allow-close",
-    "core:window:allow-is-maximized",
-    "core:window:allow-set-badge-count",
-    "core:window:allow-start-dragging",
-    "notification:default",
-    "os:default",
-    "store:default",
-    "updater:default",
-    "process:default",
-    "core:webview:allow-create-webview-window",
-    "opener:default"
-  ]
+	"$schema": "../gen/schemas/desktop-schema.json",
+	"identifier": "default",
+	"description": "Capabilities granted to the main Lyntr window",
+	"windows": [
+		"main"
+	],
+	"permissions": [
+		"core:default",
+		"core:window:allow-minimize",
+		"core:window:allow-toggle-maximize",
+		"core:window:allow-close",
+		"core:window:allow-is-maximized",
+		"core:window:allow-set-badge-count",
+		"core:window:allow-start-dragging",
+		"notification:default",
+		"os:default",
+		"store:default",
+		"updater:default",
+		"process:default",
+		"core:webview:allow-create-webview-window",
+		"opener:default",
+		"deep-link:allow-get-current"
+	]
 }
