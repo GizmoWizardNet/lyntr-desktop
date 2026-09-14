@@ -16,7 +16,7 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-notification = "2"
 tauri-plugin-os = "2"
-tauri-plugin-single-instance = "2"
+tauri-plugin-single-instance = { version = "2.4.4", features = ["deep-link"] }
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 tauri-plugin-deep-link = "2"
