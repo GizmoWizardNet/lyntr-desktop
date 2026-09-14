@@ -4,25 +4,35 @@ use tauri::{
     AppHandle, Emitter, Manager, WindowEvent,
 };
 
-/// Frontend calls this (via the JS `invoke` bridge, wrapped by
-/// `src/lib/native.ts`) whenever the unread-messages/notifications count
-/// changes, so the tray tooltip and taskbar badge stay in sync with the UI.
 #[tauri::command]
-fn set_unread_summary(app: AppHandle, messages: u32, notifications: u32) -> Result<(), String> {
+fn set_unread_summary(
+    app: AppHandle,
+    messages: u32,
+    notifications: u32,
+) -> Result<(), String> {
     let total = messages + notifications;
+
     if let Some(window) = app.get_webview_window("main") {
         window
-            .set_badge_count(if total > 0 { Some(total as i64) } else { None })
+            .set_badge_count(if total > 0 {
+                Some(total as i64)
+            } else {
+                None
+            })
             .map_err(|e| e.to_string())?;
     }
+
     if let Some(tray) = app.tray_by_id("main-tray") {
         let tooltip = if total > 0 {
             format!("Lyntr — {total} unread")
         } else {
             "Lyntr".to_string()
         };
-        tray.set_tooltip(Some(tooltip)).map_err(|e| e.to_string())?;
+
+        tray.set_tooltip(Some(tooltip))
+            .map_err(|e| e.to_string())?;
     }
+
     Ok(())
 }
 
@@ -36,13 +46,26 @@ fn show_main_window(app: &AppHandle) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let mut builder = tauri::Builder::default();
+
+    // IMPORTANT:
+    // Single-instance must be registered first so that on Windows/Linux,
+    // deep-link launches can be forwarded to the already-running instance.
+    #[cfg(desktop)]
+    {
+        builder = builder.plugin(
+            tauri_plugin_single_instance::init(|app, args, cwd| {
+                println!(
+                    "[Lyntr Desktop] Second instance launched: args={args:?}, cwd={cwd:?}"
+                );
+
+                show_main_window(app);
+            }),
+        );
+    }
+
+    builder
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-            // A second launch (or a deep link on some platforms) should
-            // just focus the existing window rather than opening a new one.
-            show_main_window(app);
-        }))
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_os::init())
@@ -53,11 +76,42 @@ pub fn run() {
         .setup(|app| {
             let handle = app.handle().clone();
 
-            let open_item = MenuItem::with_id(app, "open", "Open Lyntr", true, None::<&str>)?;
-            let messages_item = MenuItem::with_id(app, "messages", "Messages", true, None::<&str>)?;
-            let notifications_item =
-                MenuItem::with_id(app, "notifications", "Notifications", true, None::<&str>)?;
-            let quit_item = MenuItem::with_id(app, "quit", "Quit Lyntr", true, None::<&str>)?;
+            // -------------------------
+            // System tray
+            // -------------------------
+
+            let open_item = MenuItem::with_id(
+                app,
+                "open",
+                "Open Lyntr",
+                true,
+                None::<&str>,
+            )?;
+
+            let messages_item = MenuItem::with_id(
+                app,
+                "messages",
+                "Messages",
+                true,
+                None::<&str>,
+            )?;
+
+            let notifications_item = MenuItem::with_id(
+                app,
+                "notifications",
+                "Notifications",
+                true,
+                None::<&str>,
+            )?;
+
+            let quit_item = MenuItem::with_id(
+                app,
+                "quit",
+                "Quit Lyntr",
+                true,
+                None::<&str>,
+            )?;
+
             let separator = PredefinedMenuItem::separator(app)?;
 
             let tray_menu = Menu::with_items(
@@ -76,18 +130,28 @@ pub fn run() {
                 .tooltip("Lyntr")
                 .menu(&tray_menu)
                 .show_menu_on_left_click(false)
-                .on_menu_event(move |app, event| match event.id().as_ref() {
-                    "open" => show_main_window(app),
-                    "messages" => {
-                        show_main_window(app);
-                        let _ = app.emit("navigate", "messages");
+                .on_menu_event(move |app, event| {
+                    match event.id().as_ref() {
+                        "open" => {
+                            show_main_window(app);
+                        }
+
+                        "messages" => {
+                            show_main_window(app);
+                            let _ = app.emit("navigate", "messages");
+                        }
+
+                        "notifications" => {
+                            show_main_window(app);
+                            let _ = app.emit("navigate", "notifications");
+                        }
+
+                        "quit" => {
+                            app.exit(0);
+                        }
+
+                        _ => {}
                     }
-                    "notifications" => {
-                        show_main_window(app);
-                        let _ = app.emit("navigate", "notifications");
-                    }
-                    "quit" => app.exit(0),
-                    _ => {}
                 })
                 .on_tray_icon_event(|tray, event| {
                     if let TrayIconEvent::Click {
@@ -101,10 +165,27 @@ pub fn run() {
                 })
                 .build(app)?;
 
+            // -------------------------
+            // Deep-link registration
+            // -------------------------
+
             #[cfg(desktop)]
             {
                 use tauri_plugin_deep_link::DeepLinkExt;
-                let _ = handle.deep_link().register_all();
+
+                match handle.deep_link().register_all() {
+                    Ok(_) => {
+                        println!(
+                            "[Lyntr Desktop] Deep-link protocols registered"
+                        );
+                    }
+
+                    Err(error) => {
+                        eprintln!(
+                            "[Lyntr Desktop] Failed to register deep-link protocols: {error}"
+                        );
+                    }
+                }
             }
 
             Ok(())
@@ -117,6 +198,7 @@ pub fn run() {
             if let WindowEvent::CloseRequested { api, .. } = event {
                 // Close-to-tray only applies to the main Lyntr window.
                 api.prevent_close();
+
                 let _ = window.hide();
             }
         })
