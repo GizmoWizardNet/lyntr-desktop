@@ -1,4 +1,5 @@
 import { API_BASE } from './config';
+
 export class ApiError extends Error {
 	constructor(
 		public status: number,
