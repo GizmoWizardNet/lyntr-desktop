@@ -2,6 +2,8 @@
 	import { onMount } from 'svelte';
 	import { getMe, getProfileByHandle, type Me, type PublicProfile } from '$lib/api/client';
 	import { avatarUrl, bannerUrl } from '$lib/api/config';
+	import { Flame } from 'lucide-svelte';
+	import { theme } from '$lib/stores/app';
 
 	let me = $state<Me | null>(null);
 	let profile = $state<PublicProfile | null>(null);
@@ -51,9 +53,20 @@
 					<div class="pb-1">
 						<div class="flex items-center gap-1">
 							<span class="font-display text-base font-bold text-foreground">{me.username}</span>
-							{#if profile.verified}<span title="Verified">✅</span>{/if}
-							{#if profile.is_admin}<span title="Admin">🛡️</span>{/if}
-							{#if profile.contributor}<span title="Contributor">💎</span>{/if}
+							{#if profile.verified}
+								<img
+									src={$theme === 'dark' ? '/white_mode_verified.png' : '/verified.png'}
+									alt="Verified"
+									title="Verified"
+									class="h-4 w-4"
+								/>
+							{/if}
+							{#if profile.is_admin}
+								<img src="/admin_badge.png" alt="Admin" title="Admin" class="h-4 w-4" />
+							{/if}
+							{#if profile.contributor}
+								<img src="/contributor.png" alt="Contributor" title="Contributor" class="h-4 w-4" />
+							{/if}
 						</div>
 						<div class="text-sm text-muted-foreground">@{me.handle}</div>
 					</div>
@@ -82,7 +95,10 @@
 						<div class="text-xs text-muted-foreground">LyntCoins</div>
 					</div>
 					<div class="lynt-card p-3 text-center">
-						<div class="text-lg font-bold text-foreground">🔥 {me.login_streak}</div>
+						<div class="flex items-center justify-center gap-1 text-lg font-bold text-foreground">
+							<Flame class="h-4 w-4" style="color: hsl(var(--accent-amber));" />
+							{me.login_streak}
+						</div>
 						<div class="text-xs text-muted-foreground">Day streak</div>
 					</div>
 					<div class="lynt-card p-3 text-center">

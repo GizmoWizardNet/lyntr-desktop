@@ -151,26 +151,6 @@ export async function handleDesktopAuthCallback(url: URL) {
 		console.log(
 			'[Lyntr Desktop] Session refresh completed'
 		);
-
-		/*
-		 * Massive TODO:
-		 *
-		 * Store the desktop token using the Tauri secure-storage
-		 * implementation once the backend endpoint is live.
-		 *
-		 * Do NOT put this token into localStorage.
-		 */
-
-		sessionStorage.setItem(
-			'lyntr-desktop-token',
-			data.token
-		);
-
-		clearAuthState();
-
-		desktopAuthState.set('authenticated');
-
-		await refreshSession();
 	} catch (error) {
 		console.error(
 			'[Lyntr Desktop] Authentication exchange failed:',

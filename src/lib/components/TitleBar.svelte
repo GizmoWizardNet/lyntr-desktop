@@ -22,9 +22,11 @@
 		]
 	);
 	const statusColor = $derived(
-		{ connected: 'bg-success', reconnecting: 'bg-yellow-500', offline: 'bg-destructive' }[
-			$connectionState
-		]
+		{
+			connected: 'hsl(var(--accent-green))',
+			reconnecting: 'hsl(var(--accent-amber))',
+			offline: 'hsl(var(--destructive))'
+		}[$connectionState]
 	);
 </script>
 
@@ -53,14 +55,14 @@
 
 		<div data-tauri-drag-region class="ml-1 flex items-center gap-2">
 			<img src={logo} alt="Lyntr" class="h-4 w-auto" draggable="false" />
-			<span class="h-1.5 w-1.5 rounded-full {statusColor}" title={statusLabel}></span>
+			<span class="h-1.5 w-1.5 rounded-full" style="background: {statusColor};" title={statusLabel}></span>
 		</div>
 	</div>
 
 	<div data-tauri-drag-region class="flex-1"></div>
 
 	<button
-		class="shit mr-1 flex items-center gap-2 !rounded-[5px] !px-3 !py-1 text-xs text-muted-foreground"
+		class="mr-1 flex items-center gap-2 !rounded-[5px] !px-3 !py-1 text-xs text-muted-foreground"
 		style="background: hsl(var(--input)); box-shadow: var(--inset-shadow);"
 		onclick={toggleCommandPalette}
 	>

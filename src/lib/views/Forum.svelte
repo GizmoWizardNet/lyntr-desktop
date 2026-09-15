@@ -6,6 +6,7 @@
 		type ForumCategory,
 		type ForumThread
 	} from '$lib/api/client';
+	import { Pin } from 'lucide-svelte';
 
 	let categories = $state<ForumCategory[]>([]);
 	let activeCategorySlug = $state<string | null>(null);
@@ -88,7 +89,7 @@
 						<div class="min-w-0">
 							<div class="flex items-center gap-2">
 								{#if t.pinned}
-									<span class="text-xs" style="color: hsl(var(--accent-amber));">📌</span>
+									<span style="color: hsl(var(--accent-amber));"><Pin class="h-3.5 w-3.5" /></span>
 								{/if}
 								<span class="truncate text-sm font-medium text-foreground">{t.title}</span>
 							</div>

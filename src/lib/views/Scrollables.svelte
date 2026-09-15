@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { getScrollables, toggleScrollableLike, toggleScrollableBookmark, type Scrollable } from '$lib/api/client';
 	import { scrollableUrl } from '$lib/api/config';
+	import { Heart, MessageCircle, Bookmark, Volume2, VolumeX } from 'lucide-svelte';
 
 	let clips = $state<Scrollable[]>([]);
 	let index = $state(0);
@@ -106,7 +107,11 @@
 					onclick={() => (muted = !muted)}
 					title={muted ? 'Unmute' : 'Mute'}
 				>
-					{muted ? '🔇' : '🔊'}
+					{#if muted}
+						<VolumeX class="h-4 w-4" />
+					{:else}
+						<Volume2 class="h-4 w-4" />
+					{/if}
 				</button>
 			</div>
 
@@ -116,12 +121,14 @@
 						class="grid h-10 w-10 place-items-center rounded-full bg-black/40 text-lg"
 						style={clip.liked ? 'color: hsl(var(--accent-rose));' : ''}
 					>
-						{clip.liked ? '♥' : '♡'}
+						<Heart class="h-5 w-5" fill={clip.liked ? 'currentColor' : 'none'} />
 					</span>
 					{clip.likeCount}
 				</button>
 				<button class="flex flex-col items-center gap-1">
-					<span class="grid h-10 w-10 place-items-center rounded-full bg-black/40 text-lg">💬</span>
+					<span class="grid h-10 w-10 place-items-center rounded-full bg-black/40 text-lg">
+						<MessageCircle class="h-5 w-5" />
+					</span>
 					{clip.commentCount}
 				</button>
 				<button class="flex flex-col items-center gap-1" onclick={() => bookmark(clip)}>
@@ -129,7 +136,7 @@
 						class="grid h-10 w-10 place-items-center rounded-full bg-black/40 text-lg"
 						style={clip.bookmarked ? 'color: hsl(var(--accent-amber));' : ''}
 					>
-						🔖
+						<Bookmark class="h-5 w-5" fill={clip.bookmarked ? 'currentColor' : 'none'} />
 					</span>
 					{clip.bookmarkCount}
 				</button>

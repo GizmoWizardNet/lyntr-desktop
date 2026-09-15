@@ -11,6 +11,7 @@
 	} from '$lib/api/client';
 	import { onWsEvent } from '$lib/api/ws';
 	import { currentUser } from '$lib/stores/session';
+	import { MessageCircle, Repeat2, Heart, Bookmark, BookmarkCheck } from 'lucide-svelte';
 
 	let lynts = $state<Lynt[]>([]);
 	let loading = $state(true);
@@ -200,20 +201,23 @@
 					{/if}
 					<div class="mt-3 flex items-center gap-6 text-xs text-muted-foreground">
 						<button class="flex items-center gap-1.5">
-							💬 {lynt.comment_count}
+							<MessageCircle class="h-4 w-4" />
+							{lynt.comment_count}
 						</button>
 						<button
 							class="flex items-center gap-1.5"
 							style={lynt.reposted_by_user ? 'color: hsl(var(--accent-green))' : ''}
 						>
-							🔁 {lynt.repost_count}
+							<Repeat2 class="h-4 w-4" />
+							{lynt.repost_count}
 						</button>
 						<button
 							class="flex items-center gap-1.5"
 							style={lynt.liked_by_user ? 'color: hsl(var(--accent-rose))' : ''}
 							onclick={() => toggleLike(lynt)}
 						>
-							{lynt.liked_by_user ? '♥' : '♡'} {lynt.likeCount}
+							<Heart class="h-4 w-4" fill={lynt.liked_by_user ? 'currentColor' : 'none'} />
+							{lynt.likeCount}
 						</button>
 						<button
 							class="ml-auto"
@@ -221,7 +225,11 @@
 							title="Bookmark"
 							style={bookmarked[lynt.id] ? 'color: hsl(var(--accent-amber))' : ''}
 						>
-							🔖
+							{#if bookmarked[lynt.id]}
+								<BookmarkCheck class="h-4 w-4" />
+							{:else}
+								<Bookmark class="h-4 w-4" />
+							{/if}
 						</button>
 					</div>
 				</article>
